@@ -1,10 +1,37 @@
 import { create } from 'zustand';
+import Taro from '@tarojs/taro';
 import { Course, CourseSchedule, Booking, Bill, Caddie, Member, FeeCalculationResult, AllocationResult } from '@/types/golf';
 import { getCourses, getAllSchedules } from '@/services/course';
 import { getBookings } from '@/services/booking';
 import { getBills } from '@/services/billing';
 import { getCaddies } from '@/services/caddie';
 import { mockMember } from '@/data/bookings';
+
+const STORAGE_KEYS = {
+  BOOKINGS: 'golf_bookings',
+  BILLS: 'golf_bills',
+  SCHEDULES: 'golf_schedules'
+};
+
+const loadFromStorage = <T>(key: string): T | null => {
+  try {
+    const data = Taro.getStorageSync(key);
+    if (data) {
+      return JSON.parse(data) as T;
+    }
+  } catch (e) {
+    console.warn('[GolfStore] 读取本地存储失败', key, e);
+  }
+  return null;
+};
+
+const saveToStorage = (key: string, data: any) => {
+  try {
+    Taro.setStorageSync(key, JSON.stringify(data));
+  } catch (e) {
+    console.warn('[GolfStore] 保存本地存储失败', key, e);
+  }
+};
 
 interface GolfState {
   courses: Course[];
@@ -23,6 +50,7 @@ interface GolfState {
   feeResult: FeeCalculationResult | null;
   loading: boolean;
   lastAllocation: AllocationResult | null;
+  dataLoaded: boolean;
   setSelectedDate: (date: string) => void;
   setSelectedTimeSlot: (id: string, start: string, end: string) => void;
   setPlayerCount: (count: number) => void;
@@ -59,6 +87,7 @@ export const useGolfStore = create<GolfState>((set, get) => ({
   feeResult: null,
   loading: false,
   lastAllocation: null,
+  dataLoaded: false,
 
   setSelectedDate: (date) => set({ selectedDate: date }),
   setSelectedTimeSlot: (id, start, end) => set({
@@ -73,68 +102,158 @@ export const useGolfStore = create<GolfState>((set, get) => ({
   setLastAllocation: (allocation) => set({ lastAllocation: allocation }),
 
   loadAllData: async () => {
-    const { schedules, bookings, bills } = get();
-    if (schedules.length > 0 && bookings.length > 0 && bills.length > 0) {
+    if (get().dataLoaded) {
       return;
     }
     set({ loading: true });
     try {
-      const [courses, schedulesData, bookingsData, billsData, caddies] = await Promise.all([
+      const storedBookings = loadFromStorage<Booking[]>(STORAGE_KEYS.BOOKINGS);
+      const storedBills = loadFromStorage<Bill[]>(STORAGE_KEYS.BILLS);
+      const storedSchedules = loadFromStorage<CourseSchedule[]>(STORAGE_KEYS.SCHEDULES);
+
+      const [courses, caddies] = await Promise.all([
         getCourses(),
-        getAllSchedules(),
-        getBookings(mockMember.id),
-        getBills(mockMember.id),
         getCaddies()
       ]);
-      set({ courses, schedules: schedulesData, bookings: bookingsData, bills: billsData, caddies, loading: false });
+
+      let schedulesData = storedSchedules;
+      let bookingsData = storedBookings;
+      let billsData = storedBills;
+
+      if (!schedulesData || schedulesData.length === 0) {
+        schedulesData = await getAllSchedules();
+      }
+      if (!bookingsData || bookingsData.length === 0) {
+        bookingsData = await getBookings(mockMember.id);
+      }
+      if (!billsData || billsData.length === 0) {
+        billsData = await getBills(mockMember.id);
+      }
+
+      set({
+        courses,
+        schedules: schedulesData,
+        bookings: bookingsData,
+        bills: billsData,
+        caddies,
+        loading: false,
+        dataLoaded: true
+      });
     } catch (error) {
       console.error('[GolfStore] 加载数据失败', error);
       set({ loading: false });
     }
   },
 
-  addBooking: (booking) => set((state) => ({
-    bookings: [booking, ...state.bookings]
-  })),
+  addBooking: (booking) => {
+    set((state) => {
+      const newBookings = [booking, ...state.bookings];
+      saveToStorage(STORAGE_KEYS.BOOKINGS, newBookings);
+      return { bookings: newBookings };
+    });
+  },
 
-  updateBooking: (id, updates) => set((state) => ({
-    bookings: state.bookings.map(b => b.id === id ? { ...b, ...updates } : b)
-  })),
+  updateBooking: (id, updates) => {
+    set((state) => {
+      const newBookings = state.bookings.map(b => b.id === id ? { ...b, ...updates } : b);
+      saveToStorage(STORAGE_KEYS.BOOKINGS, newBookings);
+      return { bookings: newBookings };
+    });
+  },
 
-  addBill: (bill) => set((state) => ({
-    bills: [bill, ...state.bills]
-  })),
+  addBill: (bill) => {
+    set((state) => {
+      const newBills = [bill, ...state.bills];
+      saveToStorage(STORAGE_KEYS.BILLS, newBills);
+      return { bills: newBills };
+    });
+  },
 
-  updateBill: (id, updates) => set((state) => ({
-    bills: state.bills.map(b => b.id === id ? { ...b, ...updates } : b)
-  })),
+  updateBill: (id, updates) => {
+    set((state) => {
+      const newBills = state.bills.map(b => b.id === id ? { ...b, ...updates } : b);
+      saveToStorage(STORAGE_KEYS.BILLS, newBills);
+      return { bills: newBills };
+    });
+  },
 
-  payBill: (id) => set((state) => {
-    const bill = state.bills.find(b => b.id === id);
-    const updatedBills = state.bills.map(b => 
-      b.id === id ? { ...b, status: 'paid' as const, paidAt: new Date().toISOString() } : b
-    );
-    const updatedBookings = bill ? state.bookings.map(b =>
-      b.id === bill.bookingId ? { ...b, status: 'confirmed' as const } : b
-    ) : state.bookings;
-    return { bills: updatedBills, bookings: updatedBookings };
-  }),
+  payBill: (id) => {
+    set((state) => {
+      const bill = state.bills.find(b => b.id === id);
+      const updatedBills = state.bills.map(b => 
+        b.id === id ? { ...b, status: 'paid' as const, paidAt: new Date().toISOString() } : b
+      );
+      const updatedBookings = bill ? state.bookings.map(b =>
+        b.id === bill.bookingId ? { ...b, status: 'confirmed' as const } : b
+      ) : state.bookings;
+      saveToStorage(STORAGE_KEYS.BILLS, updatedBills);
+      saveToStorage(STORAGE_KEYS.BOOKINGS, updatedBookings);
+      return { bills: updatedBills, bookings: updatedBookings };
+    });
+  },
 
-  cancelBooking: (id) => set((state) => {
-    const booking = state.bookings.find(b => b.id === id);
-    const updatedBookings = state.bookings.map(b =>
-      b.id === id ? { ...b, status: 'cancelled' as const } : b
-    );
-    const updatedBills = state.bills.map(b =>
-      b.bookingId === id ? { ...b, status: 'refunded' as const } : b
-    );
-    if (booking) {
-      const updatedSchedules = state.schedules.map(s => {
-        if (s.date === booking.date && s.courseId === booking.courseId) {
+  cancelBooking: (id) => {
+    set((state) => {
+      const booking = state.bookings.find(b => b.id === id);
+      const updatedBookings = state.bookings.map(b =>
+        b.id === id ? { ...b, status: 'cancelled' as const } : b
+      );
+      const updatedBills = state.bills.map(b =>
+        b.bookingId === id ? { ...b, status: 'refunded' as const } : b
+      );
+      let updatedSchedules = state.schedules;
+      if (booking) {
+        updatedSchedules = state.schedules.map(s => {
+          if (s.date === booking.date && s.courseId === booking.courseId) {
+            return {
+              ...s,
+              slots: s.slots.map(slot =>
+                slot.timeSlotId === booking.timeSlotId
+                  ? { ...slot, status: 'available' as const, bookingId: undefined }
+                  : slot
+              ),
+              loadBalance: Math.max(0, s.loadBalance - 1)
+            };
+          }
+          return s;
+        });
+      }
+      saveToStorage(STORAGE_KEYS.BOOKINGS, updatedBookings);
+      saveToStorage(STORAGE_KEYS.BILLS, updatedBills);
+      saveToStorage(STORAGE_KEYS.SCHEDULES, updatedSchedules);
+      return { bookings: updatedBookings, bills: updatedBills, schedules: updatedSchedules };
+    });
+  },
+
+  markSlotOccupied: (date, courseId, timeSlotId, bookingId) => {
+    set((state) => {
+      const newSchedules = state.schedules.map(s => {
+        if (s.date === date && s.courseId === courseId) {
           return {
             ...s,
             slots: s.slots.map(slot =>
-              slot.timeSlotId === booking.timeSlotId
+              slot.timeSlotId === timeSlotId
+                ? { ...slot, status: 'occupied' as const, bookingId }
+                : slot
+            ),
+            loadBalance: s.loadBalance + 1
+          };
+        }
+        return s;
+      });
+      saveToStorage(STORAGE_KEYS.SCHEDULES, newSchedules);
+      return { schedules: newSchedules };
+    });
+  },
+
+  markSlotAvailable: (date, courseId, timeSlotId) => {
+    set((state) => {
+      const newSchedules = state.schedules.map(s => {
+        if (s.date === date && s.courseId === courseId) {
+          return {
+            ...s,
+            slots: s.slots.map(slot =>
+              slot.timeSlotId === timeSlotId
                 ? { ...slot, status: 'available' as const, bookingId: undefined }
                 : slot
             ),
@@ -143,44 +262,10 @@ export const useGolfStore = create<GolfState>((set, get) => ({
         }
         return s;
       });
-      return { bookings: updatedBookings, bills: updatedBills, schedules: updatedSchedules };
-    }
-    return { bookings: updatedBookings, bills: updatedBills };
-  }),
-
-  markSlotOccupied: (date, courseId, timeSlotId, bookingId) => set((state) => ({
-    schedules: state.schedules.map(s => {
-      if (s.date === date && s.courseId === courseId) {
-        return {
-          ...s,
-          slots: s.slots.map(slot =>
-            slot.timeSlotId === timeSlotId
-              ? { ...slot, status: 'occupied' as const, bookingId }
-              : slot
-          ),
-          loadBalance: s.loadBalance + 1
-        };
-      }
-      return s;
-    })
-  })),
-
-  markSlotAvailable: (date, courseId, timeSlotId) => set((state) => ({
-    schedules: state.schedules.map(s => {
-      if (s.date === date && s.courseId === courseId) {
-        return {
-          ...s,
-          slots: s.slots.map(slot =>
-            slot.timeSlotId === timeSlotId
-              ? { ...slot, status: 'available' as const, bookingId: undefined }
-              : slot
-          ),
-          loadBalance: Math.max(0, s.loadBalance - 1)
-        };
-      }
-      return s;
-    })
-  })),
+      saveToStorage(STORAGE_KEYS.SCHEDULES, newSchedules);
+      return { schedules: newSchedules };
+    });
+  },
 
   resetSelection: () => set({
     selectedTimeSlotId: null,

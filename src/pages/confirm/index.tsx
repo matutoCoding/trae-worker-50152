@@ -2,13 +2,13 @@ import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { View, Text, Button } from '@tarojs/components';
 import Taro, { useRouter } from '@tarojs/taro';
 import classnames from 'classnames';
-import dayjs from 'dayjs';
 import styles from './index.module.scss';
 import { allocateCourse, createBooking } from '@/services/booking';
 import { calculateFee, generateBill } from '@/services/billing';
 import { mockMember } from '@/data/bookings';
 import { FeeCalculationResult, AllocationResult } from '@/types/golf';
 import { useGolfStore } from '@/store/golf';
+import { calculateEndTime } from '@/utils/date';
 
 const ConfirmPage: React.FC = () => {
   const router = useRouter();

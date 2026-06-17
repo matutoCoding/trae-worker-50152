@@ -62,3 +62,9 @@ export const generateTimeSlots = (): { id: string; startTime: string; endTime: s
   }
   return slots;
 };
+
+export const calculateEndTime = (startTime: string, holes: 9 | 18): string => {
+  const duration = holes === 9 ? 30 : 60;
+  const end = dayjs(`2000-01-01 ${startTime}`).add(duration, 'minute');
+  return end.format('HH:mm');
+};

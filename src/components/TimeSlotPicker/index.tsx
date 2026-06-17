@@ -28,10 +28,15 @@ const TimeSlotPicker: React.FC<TimeSlotPickerProps> = ({
   }, [schedules, selectedDate]);
 
   const isSlotOccupied = (slotId: string): boolean => {
-    return daySchedules.some(schedule => {
+    if (daySchedules.length === 0) return false;
+    let occupiedCount = 0;
+    for (const schedule of daySchedules) {
       const slot = schedule.slots.find(s => s.timeSlotId === slotId);
-      return slot && slot.status !== 'available';
-    });
+      if (slot && slot.status !== 'available') {
+        occupiedCount++;
+      }
+    }
+    return occupiedCount === daySchedules.length;
   };
 
   return (
