@@ -14,6 +14,7 @@ const BookingPage: React.FC = () => {
     selectedDate,
     selectedTimeSlotId,
     selectedStartTime,
+    selectedEndTime,
     playerCount,
     holes,
     hasCaddie,
@@ -79,12 +80,12 @@ const BookingPage: React.FC = () => {
   };
 
   const handleSubmit = async () => {
-    if (!selectedTimeSlotId) {
+    if (!selectedTimeSlotId || !selectedEndTime) {
       Taro.showToast({ title: '请选择开球时间', icon: 'none' });
       return;
     }
     Taro.navigateTo({
-      url: `/pages/confirm/index?date=${selectedDate}&timeSlotId=${selectedTimeSlotId}&startTime=${selectedStartTime}&playerCount=${playerCount}&holes=${holes}&hasCaddie=${hasCaddie}`
+      url: `/pages/confirm/index?date=${selectedDate}&timeSlotId=${selectedTimeSlotId}&startTime=${selectedStartTime}&endTime=${selectedEndTime}&playerCount=${playerCount}&holes=${holes}&hasCaddie=${hasCaddie}`
     });
   };
 

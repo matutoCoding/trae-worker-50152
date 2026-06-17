@@ -34,10 +34,7 @@ const DetailPage: React.FC = () => {
 
   const displayEndTime = useMemo(() => {
     if (!booking) return '';
-    if (booking.endTime) return booking.endTime;
-    const duration = booking.holes === 9 ? 30 : 60;
-    const end = dayjs(`2000-01-01 ${booking.startTime}`).add(duration, 'minute');
-    return end.format('HH:mm');
+    return booking.endTime || '';
   }, [booking]);
 
   useEffect(() => {
