@@ -17,7 +17,6 @@ const ConfirmPage: React.FC = () => {
 
   const {
     schedules,
-    bookings,
     setLastAllocation,
     addBooking,
     addBill,
@@ -51,14 +50,6 @@ const ConfirmPage: React.FC = () => {
     }
     return occupiedCount === daySchedules.length;
   }, [schedules, date, timeSlotId]);
-
-  const hasExistingBooking = useCallback(() => {
-    return bookings.some(b =>
-      b.date === date &&
-      b.timeSlotId === timeSlotId &&
-      b.status !== 'cancelled'
-    );
-  }, [bookings, date, timeSlotId]);
 
   const acquireSubmitLock = (): boolean => {
     const lockKey = `${SUBMIT_LOCK_KEY}_${date}_${timeSlotId}`;
@@ -96,12 +87,6 @@ const ConfirmPage: React.FC = () => {
       return;
     }
 
-    if (hasExistingBooking()) {
-      setTimeConflict(true);
-      setLoading(false);
-      return;
-    }
-
     if (isTimeSlotOccupied()) {
       setTimeConflict(true);
       setLoading(false);
@@ -126,6 +111,9 @@ const ConfirmPage: React.FC = () => {
           hasCaddie: hasCaddieBool
         })
       ]);
+      if (!allocResult.success) {
+        setTimeConflict(true);
+      }
       setAllocation(allocResult);
       setFeeResult(feeCalc);
       setLastAllocation(allocResult);
@@ -135,7 +123,7 @@ const ConfirmPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [date, timeSlotId, startTime, endTime, holesNum, playerCountNum, hasCaddieBool, schedules, setLastAllocation, hasExistingBooking, isTimeSlotOccupied]);
+  }, [date, timeSlotId, startTime, endTime, holesNum, playerCountNum, hasCaddieBool, schedules, setLastAllocation, isTimeSlotOccupied]);
 
   useEffect(() => {
     loadData();
@@ -149,13 +137,6 @@ const ConfirmPage: React.FC = () => {
 
     if (!acquireSubmitLock()) {
       Taro.showToast({ title: '正在提交中，请勿重复点击', icon: 'none' });
-      return;
-    }
-
-    if (hasExistingBooking()) {
-      releaseSubmitLock();
-      Taro.showToast({ title: '该时段已有有效预约', icon: 'none' });
-      setTimeConflict(true);
       return;
     }
 

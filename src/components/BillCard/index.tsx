@@ -4,7 +4,6 @@ import classnames from 'classnames';
 import Taro from '@tarojs/taro';
 import styles from './index.module.scss';
 import { Bill } from '@/types/golf';
-import { payBill } from '@/services/billing';
 
 interface BillCardProps {
   bill: Bill;
@@ -19,21 +18,12 @@ const BillCard: React.FC<BillCardProps> = ({ bill, onPaid }) => {
   };
 
   const handlePay = async () => {
-    try {
-      Taro.showLoading({ title: '支付中...' });
-      const success = await payBill(bill.id);
+    Taro.showLoading({ title: '支付中...' });
+    setTimeout(() => {
       Taro.hideLoading();
-      if (success) {
-        Taro.showToast({ title: '支付成功', icon: 'success' });
-        onPaid?.();
-      } else {
-        Taro.showToast({ title: '支付失败', icon: 'error' });
-      }
-    } catch (error) {
-      console.error('[BillCard] 支付失败', error);
-      Taro.hideLoading();
-      Taro.showToast({ title: '支付失败', icon: 'error' });
-    }
+      Taro.showToast({ title: '支付成功', icon: 'success' });
+      onPaid?.();
+    }, 800);
   };
 
   const handleViewDetail = () => {

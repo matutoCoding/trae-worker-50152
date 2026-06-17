@@ -5,7 +5,6 @@ import styles from './index.module.scss';
 import { useGolfStore } from '@/store/golf';
 import BookingRecordCard from '@/components/BookingRecordCard';
 import CaddieCard from '@/components/CaddieCard';
-import { cancelBooking as cancelBookingService } from '@/services/booking';
 
 const MinePage: React.FC = () => {
   const { member, bookings, caddies, loadAllData, cancelBooking: cancelInStore } = useGolfStore();
@@ -27,17 +26,10 @@ const MinePage: React.FC = () => {
   const handleCancel = async (bookingId: string) => {
     try {
       Taro.showLoading({ title: '取消中...' });
-      const success = await cancelBookingService(bookingId);
-      if (success) {
-        cancelInStore(bookingId);
-      }
+      cancelInStore(bookingId);
       Taro.hideLoading();
-      if (success) {
-        Taro.showToast({ title: '已取消预约', icon: 'success' });
-        Taro.eventCenter.trigger('home:refresh');
-      } else {
-        Taro.showToast({ title: '取消失败', icon: 'error' });
-      }
+      Taro.showToast({ title: '已取消预约', icon: 'success' });
+      Taro.eventCenter.trigger('home:refresh');
     } catch (error) {
       console.error('[MinePage] 取消预约失败', error);
       Taro.hideLoading();

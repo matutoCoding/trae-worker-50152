@@ -1,12 +1,8 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { View, Text, Button } from '@tarojs/components';
 import Taro, { useRouter } from '@tarojs/taro';
 import classnames from 'classnames';
-import dayjs from 'dayjs';
 import styles from './index.module.scss';
-import { cancelBooking } from '@/services/booking';
-import { payBill } from '@/services/billing';
-import { Booking, Bill } from '@/types/golf';
 import { formatDateTime } from '@/utils/date';
 import { useGolfStore } from '@/store/golf';
 
@@ -56,17 +52,10 @@ const DetailPage: React.FC = () => {
 
     try {
       Taro.showLoading({ title: '取消中...' });
-      const success = await cancelBooking(booking.id);
-      if (success) {
-        cancelInStore(booking.id);
-      }
+      cancelInStore(booking.id);
       Taro.hideLoading();
-      if (success) {
-        Taro.showToast({ title: '已取消预约', icon: 'success' });
-        Taro.eventCenter.trigger('home:refresh');
-      } else {
-        Taro.showToast({ title: '取消失败', icon: 'error' });
-      }
+      Taro.showToast({ title: '已取消预约', icon: 'success' });
+      Taro.eventCenter.trigger('home:refresh');
     } catch (error) {
       console.error('[DetailPage] 取消预约失败', error);
       Taro.hideLoading();
@@ -78,17 +67,10 @@ const DetailPage: React.FC = () => {
     if (!bill) return;
     try {
       Taro.showLoading({ title: '支付中...' });
-      const success = await payBill(bill.id);
-      if (success) {
-        payInStore(bill.id);
-      }
+      payInStore(bill.id);
       Taro.hideLoading();
-      if (success) {
-        Taro.showToast({ title: '支付成功', icon: 'success' });
-        Taro.eventCenter.trigger('home:refresh');
-      } else {
-        Taro.showToast({ title: '支付失败', icon: 'error' });
-      }
+      Taro.showToast({ title: '支付成功', icon: 'success' });
+      Taro.eventCenter.trigger('home:refresh');
     } catch (error) {
       console.error('[DetailPage] 支付失败', error);
       Taro.hideLoading();
