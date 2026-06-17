@@ -7,6 +7,7 @@ interface AllocationContext {
   date: string;
   timeSlotId: string;
   holes: 9 | 18;
+  hasCaddie?: boolean;
 }
 
 const calculateFragmentationScore = (schedule: CourseSchedule, timeSlotId: string): number => {
@@ -69,7 +70,7 @@ const calculateCoursePreference = (course: Course, holes: 9 | 18): number => {
 };
 
 export const allocateOptimalCourse = (ctx: AllocationContext): AllocationResult => {
-  console.log('[CourseAllocator] 开始分配球道', { date: ctx.date, timeSlotId: ctx.timeSlotId, holes: ctx.holes });
+  console.log('[CourseAllocator] 开始分配球道', { date: ctx.date, timeSlotId: ctx.timeSlotId, holes: ctx.holes, hasCaddie: ctx.hasCaddie });
 
   const availableCourses = ctx.courses.filter(c => c.status === 'available');
   if (availableCourses.length === 0) {
@@ -117,8 +118,17 @@ export const allocateOptimalCourse = (ctx: AllocationContext): AllocationResult 
 
   console.log('[CourseAllocator] 分配结果', {
     course: selectedCourse.name,
-    score: bestMatch.score
+    score: bestMatch.score,
+    hasCaddie: ctx.hasCaddie
   });
+
+  if (ctx.hasCaddie === false) {
+    return {
+      success: true,
+      courseId: selectedCourse.id,
+      courseName: selectedCourse.name
+    };
+  }
 
   const availableCaddie = ctx.caddies.find(c => c.status === 'available');
 

@@ -1,45 +1,52 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { View, Text, Button } from '@tarojs/components';
 import Taro, { useRouter } from '@tarojs/taro';
 import classnames from 'classnames';
+import dayjs from 'dayjs';
 import styles from './index.module.scss';
-import { getBookingById, cancelBooking } from '@/services/booking';
-import { getBillByBookingId, payBill } from '@/services/billing';
+import { cancelBooking } from '@/services/booking';
+import { payBill } from '@/services/billing';
 import { Booking, Bill } from '@/types/golf';
 import { formatDateTime } from '@/utils/date';
+import { useGolfStore } from '@/store/golf';
 
 const DetailPage: React.FC = () => {
   const router = useRouter();
   const { id } = router.params;
 
-  const [loading, setLoading] = useState(true);
-  const [booking, setBooking] = useState<Booking | null>(null);
-  const [bill, setBill] = useState<Bill | null>(null);
+  const {
+    bookings,
+    bills,
+    cancelBooking: cancelInStore,
+    payBill: payInStore,
+    loadAllData
+  } = useGolfStore();
 
-  const loadData = useCallback(async () => {
-    if (!id) {
-      Taro.showToast({ title: '参数错误', icon: 'error' });
-      return;
-    }
-    try {
-      setLoading(true);
-      const [bookingData, billData] = await Promise.all([
-        getBookingById(id as string),
-        getBillByBookingId(id as string)
-      ]);
-      setBooking(bookingData || null);
-      setBill(billData || null);
-    } catch (error) {
-      console.error('[DetailPage] 加载数据失败', error);
-      Taro.showToast({ title: '加载失败', icon: 'error' });
-    } finally {
-      setLoading(false);
-    }
-  }, [id]);
+  const [loading, setLoading] = useState(true);
+
+  const booking = useMemo(() => {
+    return bookings.find(b => b.id === id) || null;
+  }, [bookings, id]);
+
+  const bill = useMemo(() => {
+    return bills.find(b => b.bookingId === id) || null;
+  }, [bills, id]);
+
+  const displayEndTime = useMemo(() => {
+    if (!booking) return '';
+    if (booking.endTime) return booking.endTime;
+    const duration = booking.holes === 9 ? 30 : 60;
+    const end = dayjs(`2000-01-01 ${booking.startTime}`).add(duration, 'minute');
+    return end.format('HH:mm');
+  }, [booking]);
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    const init = async () => {
+      await loadAllData();
+      setLoading(false);
+    };
+    init();
+  }, [loadAllData]);
 
   const handleCancel = async () => {
     if (!booking) return;
@@ -53,11 +60,13 @@ const DetailPage: React.FC = () => {
     try {
       Taro.showLoading({ title: '取消中...' });
       const success = await cancelBooking(booking.id);
+      if (success) {
+        cancelInStore(booking.id);
+      }
       Taro.hideLoading();
       if (success) {
         Taro.showToast({ title: '已取消预约', icon: 'success' });
         Taro.eventCenter.trigger('home:refresh');
-        await loadData();
       } else {
         Taro.showToast({ title: '取消失败', icon: 'error' });
       }
@@ -73,11 +82,13 @@ const DetailPage: React.FC = () => {
     try {
       Taro.showLoading({ title: '支付中...' });
       const success = await payBill(bill.id);
+      if (success) {
+        payInStore(bill.id);
+      }
       Taro.hideLoading();
       if (success) {
         Taro.showToast({ title: '支付成功', icon: 'success' });
         Taro.eventCenter.trigger('home:refresh');
-        await loadData();
       } else {
         Taro.showToast({ title: '支付失败', icon: 'error' });
       }
@@ -172,7 +183,7 @@ const DetailPage: React.FC = () => {
           </View>
           <View className={styles.infoRow}>
             <Text className={styles.infoLabel}>开球时间</Text>
-            <Text className={styles.infoValue}>{booking.startTime} - {booking.endTime}</Text>
+            <Text className={styles.infoValue}>{booking.startTime} - {displayEndTime}</Text>
           </View>
           <View className={styles.infoRow}>
             <Text className={styles.infoLabel}>打球人数</Text>

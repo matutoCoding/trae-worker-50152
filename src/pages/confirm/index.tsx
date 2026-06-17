@@ -1,16 +1,27 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { View, Text, Button } from '@tarojs/components';
 import Taro, { useRouter } from '@tarojs/taro';
 import classnames from 'classnames';
+import dayjs from 'dayjs';
 import styles from './index.module.scss';
 import { allocateCourse, createBooking } from '@/services/booking';
 import { calculateFee, generateBill } from '@/services/billing';
 import { mockMember } from '@/data/bookings';
 import { FeeCalculationResult, AllocationResult } from '@/types/golf';
+import { useGolfStore } from '@/store/golf';
 
 const ConfirmPage: React.FC = () => {
   const router = useRouter();
   const { date, timeSlotId, startTime, playerCount, holes, hasCaddie } = router.params;
+
+  const {
+    schedules,
+    setLastAllocation,
+    addBooking,
+    addBill,
+    markSlotOccupied,
+    updateBooking
+  } = useGolfStore();
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -21,11 +32,12 @@ const ConfirmPage: React.FC = () => {
   const playerCountNum = parseInt(playerCount as string, 10);
   const hasCaddieBool = hasCaddie === 'true';
 
-  const endTime = startTime
-    ? `${parseInt((startTime as string).split(':')[0], 10)}:${(parseInt((startTime as string).split(':')[1], 10) + 30) % 60}`
-        .replace(/^(\d):/, '0$1:')
-        .replace(/:(\d)$/, ':0$1')
-    : '';
+  const endTime = useMemo(() => {
+    if (!startTime) return '';
+    const duration = holesNum === 9 ? 30 : 60;
+    const end = dayjs(`2000-01-01 ${startTime}`).add(duration, 'minute');
+    return end.format('HH:mm');
+  }, [startTime, holesNum]);
 
   const loadData = useCallback(async () => {
     if (!date || !timeSlotId || !startTime) {
@@ -40,7 +52,9 @@ const ConfirmPage: React.FC = () => {
         allocateCourse({
           date: date as string,
           timeSlotId: timeSlotId as string,
-          holes: holesNum
+          holes: holesNum,
+          hasCaddie: hasCaddieBool,
+          existingSchedules: schedules
         }),
         calculateFee({
           holes: holesNum,
@@ -52,13 +66,14 @@ const ConfirmPage: React.FC = () => {
       ]);
       setAllocation(allocResult);
       setFeeResult(feeCalc);
+      setLastAllocation(allocResult);
     } catch (error) {
       console.error('[ConfirmPage] 加载数据失败', error);
       Taro.showToast({ title: '加载失败', icon: 'error' });
     } finally {
       setLoading(false);
     }
-  }, [date, timeSlotId, startTime, holesNum, playerCountNum, hasCaddieBool]);
+  }, [date, timeSlotId, startTime, holesNum, playerCountNum, hasCaddieBool, schedules, setLastAllocation]);
 
   useEffect(() => {
     loadData();
@@ -82,18 +97,30 @@ const ConfirmPage: React.FC = () => {
         startTime: startTime as string,
         endTime,
         playerCount: playerCountNum,
-        holes: holesNum
-      });
+        holes: holesNum,
+        hasCaddie: hasCaddieBool
+      }, allocation);
 
-      await generateBill({
+      const bill = await generateBill({
         id: booking.id,
         memberId: mockMember.id,
         memberName: mockMember.name,
         date: date as string,
         startTime: startTime as string,
         playerCount: playerCountNum,
-        holes: holesNum
+        holes: holesNum,
+        hasCaddie: hasCaddieBool
       });
+
+      addBooking(booking);
+      addBill(bill);
+      markSlotOccupied(
+        date as string,
+        allocation.courseId!,
+        timeSlotId as string,
+        booking.id
+      );
+      updateBooking(booking.id, { billId: bill.id });
 
       Taro.hideLoading();
       Taro.showToast({ title: '预约成功', icon: 'success' });

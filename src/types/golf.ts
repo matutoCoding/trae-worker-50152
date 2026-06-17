@@ -58,6 +58,7 @@ export interface Booking {
   caddieName?: string;
   playerCount: number;
   holes: 9 | 18;
+  hasCaddie: boolean;
   status: BookingStatus;
   createdAt: string;
   billId?: string;

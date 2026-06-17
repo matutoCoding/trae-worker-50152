@@ -67,15 +67,16 @@ export const generateBill = async (booking: {
   startTime: string;
   playerCount: number;
   holes: number;
+  hasCaddie?: boolean;
 }): Promise<Bill> => {
-  console.log('[BillingService] 生成账单', { bookingId: booking.id });
+  console.log('[BillingService] 生成账单', { bookingId: booking.id, hasCaddie: booking.hasCaddie });
 
   const feeResult = await calculateFee({
     holes: booking.holes,
     date: booking.date,
     startTime: booking.startTime,
     playerCount: booking.playerCount,
-    hasCaddie: true
+    hasCaddie: booking.hasCaddie ?? true
   });
 
   const bill: Bill = {

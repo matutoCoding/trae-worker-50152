@@ -5,33 +5,23 @@ import classnames from 'classnames';
 import styles from './index.module.scss';
 import { useGolfStore } from '@/store/golf';
 import BillCard from '@/components/BillCard';
-import { getBills } from '@/services/billing';
-import { mockMember } from '@/data/bookings';
-import { Bill } from '@/types/golf';
 
 type TabType = 'all' | 'unpaid' | 'paid';
 
 const BillPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('all');
-  const [bills, setBills] = useState<Bill[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const loadBills = async () => {
-    try {
-      setLoading(true);
-      const data = await getBills(mockMember.id);
-      setBills(data);
-    } catch (error) {
-      console.error('[BillPage] 加载账单失败', error);
-      Taro.showToast({ title: '加载失败', icon: 'error' });
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { bills, loadAllData, payBill } = useGolfStore();
 
   useEffect(() => {
-    loadBills();
-  }, []);
+    const init = async () => {
+      setLoading(true);
+      await loadAllData();
+      setLoading(false);
+    };
+    init();
+  }, [loadAllData]);
 
   const filteredBills = useMemo(() => {
     switch (activeTab) {
@@ -56,13 +46,14 @@ const BillPage: React.FC = () => {
     { key: 'paid', label: '已支付' }
   ];
 
-  const handlePaid = () => {
-    loadBills();
-    Taro.eventCenter.trigger('home:refresh');
+  const handleRefresh = async () => {
+    setLoading(true);
+    await loadAllData();
+    setLoading(false);
   };
 
   return (
-    <ScrollView scrollY className={styles.container} refresherEnabled refresherTriggered={loading} onRefresherRefresh={loadBills}>
+    <ScrollView scrollY className={styles.container} refresherEnabled refresherTriggered={loading} onRefresherRefresh={handleRefresh}>
       <View className={styles.summary}>
         <Text className={styles.summaryTitle}>待支付金额</Text>
         <Text className={styles.summaryAmount}>¥{unpaidTotal.toFixed(2)}</Text>
@@ -92,7 +83,10 @@ const BillPage: React.FC = () => {
         </View>
       ) : (
         filteredBills.map(bill => (
-          <BillCard key={bill.id} bill={bill} onPaid={handlePaid} />
+          <BillCard key={bill.id} bill={bill} onPaid={() => {
+            payBill(bill.id);
+            Taro.eventCenter.trigger('home:refresh');
+          }} />
         ))
       )}
     </ScrollView>

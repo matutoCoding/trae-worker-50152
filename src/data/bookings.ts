@@ -21,6 +21,7 @@ export const mockBookings: Booking[] = [
     caddieName: '张伟',
     playerCount: 4,
     holes: 18,
+    hasCaddie: true,
     status: 'confirmed',
     createdAt: new Date(Date.now() - 86400000).toISOString(),
     billId: 'bill_001'
@@ -39,6 +40,7 @@ export const mockBookings: Booking[] = [
     caddieName: '陈静',
     playerCount: 3,
     holes: 18,
+    hasCaddie: true,
     status: 'pending',
     createdAt: new Date(Date.now() - 3600000).toISOString(),
     billId: 'bill_002'
@@ -57,6 +59,7 @@ export const mockBookings: Booking[] = [
     caddieName: '李娜',
     playerCount: 2,
     holes: 9,
+    hasCaddie: true,
     status: 'completed',
     createdAt: new Date(Date.now() - 4 * 86400000).toISOString(),
     billId: 'bill_003'
@@ -73,6 +76,7 @@ export const mockBookings: Booking[] = [
     courseName: 'D场 - 精英球场',
     playerCount: 4,
     holes: 18,
+    hasCaddie: false,
     status: 'cancelled',
     createdAt: new Date(Date.now() - 10 * 86400000).toISOString()
   },
@@ -90,6 +94,7 @@ export const mockBookings: Booking[] = [
     caddieName: '赵敏',
     playerCount: 2,
     holes: 9,
+    hasCaddie: true,
     status: 'confirmed',
     createdAt: new Date(Date.now() - 2 * 86400000).toISOString(),
     billId: 'bill_005'

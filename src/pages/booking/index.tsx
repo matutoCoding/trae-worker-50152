@@ -16,16 +16,17 @@ const BookingPage: React.FC = () => {
     selectedStartTime,
     playerCount,
     holes,
+    hasCaddie,
     setSelectedDate,
     setSelectedTimeSlot,
     setPlayerCount,
     setHoles,
+    setHasCaddie,
     setFeeResult,
     feeResult,
     loadAllData
   } = useGolfStore();
 
-  const [hasCaddie, setHasCaddie] = useState(true);
   const [loading, setLoading] = useState(false);
 
   const holesOptions: Array<{ value: 9 | 18; label: string }> = [

@@ -28,7 +28,7 @@ const TimeSlotPicker: React.FC<TimeSlotPickerProps> = ({
   }, [schedules, selectedDate]);
 
   const isSlotOccupied = (slotId: string): boolean => {
-    return daySchedules.every(schedule => {
+    return daySchedules.some(schedule => {
       const slot = schedule.slots.find(s => s.timeSlotId === slotId);
       return slot && slot.status !== 'available';
     });
