@@ -1,0 +1,70 @@
+@use '@/styles/variables.scss' as *;
+
+.card {
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-md;
+  box-shadow: $shadow-card;
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  margin-bottom: $spacing-md;
+}
+
+.avatar {
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: $radius-round;
+  flex-shrink: 0;
+  background: $color-bg-hover;
+}
+
+.info {
+  flex: 1;
+  min-width: 0;
+}
+
+.nameRow {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  margin-bottom: 8rpx;
+}
+
+.name {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+}
+
+.rating {
+  font-size: $font-size-xs;
+  color: $color-secondary;
+}
+
+.meta {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+}
+
+.status {
+  padding: 6rpx 16rpx;
+  border-radius: $radius-sm;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+}
+
+.statusAvailable {
+  background: #E8F5E9;
+  color: $color-success;
+}
+
+.statusOnDuty {
+  background: #FFF3E0;
+  color: $color-warning;
+}
+
+.statusRest {
+  background: #F5F5F5;
+  color: $color-text-tertiary;
+}

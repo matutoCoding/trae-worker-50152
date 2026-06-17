@@ -1,0 +1,99 @@
+@use '@/styles/variables.scss' as *;
+
+.container {
+  padding: 0;
+}
+
+.dateRow {
+  display: flex;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-lg;
+  padding: $spacing-md 0;
+  @include scroll-x-container;
+}
+
+@include scroll-x-container;
+
+.dateItem {
+  @include scroll-x-item(140rpx);
+  background: $color-bg-card;
+  border-radius: $radius-md;
+  padding: $spacing-md $spacing-sm;
+  text-align: center;
+  border: 2rpx solid transparent;
+  transition: all $transition-base;
+
+  &.active {
+    border-color: $color-primary;
+    background: $color-primary-bg;
+  }
+}
+
+.dateWeekday {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  margin-bottom: 4rpx;
+}
+
+.dateDay {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+}
+
+.active .dateWeekday,
+.active .dateDay {
+  color: $color-primary;
+}
+
+.sectionTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  margin-bottom: $spacing-md;
+}
+
+.slotGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+}
+
+.slotItem {
+  width: calc((100% - 3 * 16rpx) / 4);
+  padding: $spacing-sm 0;
+  background: $color-bg-card;
+  border-radius: $radius-md;
+  text-align: center;
+  border: 2rpx solid transparent;
+  transition: all $transition-base;
+
+  &.available:active {
+    opacity: 0.9;
+    transform: scale(0.98);
+  }
+
+  &.active {
+    border-color: $color-primary;
+    background: $color-primary-bg;
+
+    .slotTime {
+      color: $color-primary;
+      font-weight: $font-weight-semibold;
+    }
+  }
+
+  &.occupied {
+    background: #F5F5F5;
+
+    .slotTime {
+      color: $color-text-disabled;
+      text-decoration: line-through;
+    }
+  }
+}
+
+.slotTime {
+  font-size: $font-size-sm;
+  color: $color-text-primary;
+}
